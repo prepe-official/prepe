@@ -1,24 +1,58 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
 import BlueButton from "../components/BlueButton";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useDispatch } from "react-redux";
 import { setCity } from "../store/slices/citySlice";
-
-const majorCities = ["Indore", "Khandwa", "Bhopal", "Gwalior", "Jabalpur"];
+import axios from "axios";
 
 export default function CitySelectionScreen({ navigation }) {
   const dispatch = useDispatch();
   const [selectedCity, setSelectedCity] = useState(null);
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState(
-    majorCities.map((city, index) => ({
-      label: city,
-      value: city,
-      disabled: index >= 2, // Disable items at index 2 and above (last three cities)
-    }))
-  );
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchCities();
+  }, []);
+
+  const fetchCities = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data } = await axios.get(
+        `${process.env.EXPO_PUBLIC_API_URL}/configuration/get`
+      );
+
+      if (data.success && data.configuration.supportedCities) {
+        const cityItems = data.configuration.supportedCities.map((city) => ({
+          label: city.name,
+          value: city.name,
+          disabled: city.isActive === false,
+        }));
+
+        setItems(cityItems);
+      } else {
+        setError("No cities available");
+      }
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      setError("Failed to load cities. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleContinue = () => {
     if (selectedCity) {
@@ -40,31 +74,45 @@ export default function CitySelectionScreen({ navigation }) {
       <View style={styles.content}>
         <Text style={styles.title}>Which city are you{"\n"}based of?</Text>
 
-        <View style={styles.dropdownContainer}>
-          <DropDownPicker
-            open={open}
-            value={selectedCity}
-            items={items}
-            setOpen={setOpen}
-            setValue={setSelectedCity}
-            setItems={setItems}
-            placeholder="Select City"
-            style={styles.dropdown}
-            textStyle={styles.dropdownText}
-            dropDownContainerStyle={styles.dropdownList}
-            listItemContainerStyle={styles.dropdownItem}
-            placeholderStyle={styles.placeholderStyle}
-            disabledStyle={styles.disabledItem}
-            disabledItemLabelStyle={styles.disabledItemText}
-            zIndex={3000}
-            zIndexInverse={1000}
-          />
-        </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading cities...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchCities}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.dropdownContainer}>
+            <DropDownPicker
+              open={open}
+              value={selectedCity}
+              items={items}
+              setOpen={setOpen}
+              setValue={setSelectedCity}
+              setItems={setItems}
+              placeholder="Select City"
+              style={styles.dropdown}
+              textStyle={styles.dropdownText}
+              dropDownContainerStyle={styles.dropdownList}
+              listItemContainerStyle={styles.dropdownItem}
+              placeholderStyle={styles.placeholderStyle}
+              disabledStyle={styles.disabledItem}
+              disabledItemLabelStyle={styles.disabledItemText}
+              zIndex={3000}
+              zIndexInverse={1000}
+            />
+          </View>
+        )}
 
         <BlueButton
           title="Continue"
           onPress={handleContinue}
-          disabled={!selectedCity}
+          disabled={!selectedCity || loading}
           style={styles.continueButton}
         />
       </View>
@@ -137,5 +185,39 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "absolute",
     bottom: 35,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 30,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#fff",
+    fontWeight: "500",
+  },
+  errorContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 30,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#FF6B6B",
+    textAlign: "center",
+    marginBottom: 15,
+    fontWeight: "500",
+  },
+  retryButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
