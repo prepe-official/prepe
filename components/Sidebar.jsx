@@ -81,10 +81,33 @@ const Sidebar = ({ visible, onClose }) => {
 
             {/* User info */}
             <View style={styles.userInfo}>
-              <Image
-                source={{ uri: user?.image || "https://placehold.co/80x80" }}
-                style={styles.avatar}
-              />
+              <TouchableOpacity onPress={() => navigateTo("AccountSettings")}>
+                {user?.image ? (
+                  <Image source={{ uri: user.image }} style={styles.avatar} />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatar,
+                      {
+                        justifyContent: "center",
+                        alignItems: "center",
+                        backgroundColor: "#fff",
+                      },
+                    ]}
+                  >
+                    <Ionicons name="camera-outline" size={24} color="#1b94e4" />
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        color: "#1b94e4",
+                        fontWeight: "600",
+                      }}
+                    >
+                      Add Photo
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <Text style={styles.username}>{user?.name || "Username"}</Text>
 
               {/* Wallet info */}
@@ -277,12 +300,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   disabledFooterText: {
-      color: '#a0a0a0'
+    color: '#a0a0a0'
   },
   footerSeparator: {
-      fontSize: 12,
-      color: '#a0a0a0',
-      marginHorizontal: 4,
+    fontSize: 12,
+    color: '#a0a0a0',
+    marginHorizontal: 4,
   }
 });
 

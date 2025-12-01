@@ -103,15 +103,71 @@ const SignupScreenStep2 = ({ route, navigation }) => {
 
   // 3) Navigate user
 
-  const handleNavigateToStep3 = () => {
-  navigation.navigate("SignupStep3", {
-    name,
-    email,
-    password,
-    phone,
-    address,
-  });
-};
+  // 3) Final step: Create user, auto-login, and navigate
+  const handleCompleteSignup = async () => {
+    setIsLoading(true);
+    try {
+      // Construct the final payload for user creation
+      const payload = {
+        name,
+        email,
+        password,
+        phoneNumber: phone,
+        address,
+        city: selectedCity,
+      };
+
+      // Create the user
+      const resp = await fetch(`${API_BASE}/user/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.message || "Registration failed");
+
+      // Auto-login immediately after successful signup
+      const loginResp = await fetch(`${API_BASE}/user/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const loginData = await loginResp.json();
+
+      if (loginResp.ok && loginData.success) {
+        dispatch(loginAction({ user: loginData.user, token: loginData.token }));
+
+        // Register for push notifications
+        const expoPushToken = await registerForPushNotificationsAsync();
+        if (expoPushToken) {
+          await sendFCMTokenToServer({
+            userId: loginData.user._id,
+            authToken: loginData.token,
+            expoPushToken,
+          });
+        }
+
+        // Clear the persisted signup form data
+        dispatch(clearProgress());
+
+        // Navigate to the main app, replacing the signup stack
+        navigation.replace("Main");
+      } else {
+        // Fallback: account created but auto-login failed
+        Alert.alert(
+          "Success",
+          "Account created successfully. Please login to continue."
+        );
+        navigation.navigate("Login");
+      }
+    } catch (err) {
+      Alert.alert("Error", err.message);
+      // navigation.navigate("Signup"); // Stay on step 2 if error, or go back to start? Stay is better for retry.
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -215,13 +271,16 @@ const SignupScreenStep2 = ({ route, navigation }) => {
             <>
               <Text style={styles.headerText}>Almost Done!</Text>
               <Text style={styles.infoText}>
-                Phone verified. Let's add a profile photo.
+                Phone verified. Click below to complete your registration.
               </Text>
               <TouchableOpacity
                 style={styles.button}
-                onPress={handleNavigateToStep3}
+                onPress={handleCompleteSignup}
+                disabled={isLoading}
               >
-                <Text style={styles.buttonText}>Next: Add Photo</Text>
+                <Text style={styles.buttonText}>
+                  {isLoading ? "Creating Account..." : "Complete Sign Up"}
+                </Text>
               </TouchableOpacity>
             </>
           )}

@@ -14,6 +14,9 @@ import {
 } from "react-native";
 import { saveProgress } from "../store/slices/signupSlice";
 import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
+import DropDownPicker from "react-native-dropdown-picker";
+import { setCity } from "../store/slices/citySlice";
 
 const SignupScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -25,6 +28,39 @@ const SignupScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState(
     signupProgress?.password || "" // autofill confirm if password exists
   );
+
+  // City Selection State
+  const [open, setOpen] = useState(false);
+  const [selectedCity, setSelectedCity] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(true);
+
+  useEffect(() => {
+    fetchCities();
+  }, []);
+
+  const fetchCities = async () => {
+    try {
+      setLoadingCities(true);
+      const { data } = await axios.get(
+        `${process.env.EXPO_PUBLIC_API_URL}/configuration/get`
+      );
+
+      if (data.success && data.configuration.supportedCities) {
+        const cityItems = data.configuration.supportedCities.map((city) => ({
+          label: city.name,
+          value: city.name,
+          disabled: city.isActive === false,
+        }));
+        setItems(cityItems);
+      }
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      Alert.alert("Error", "Failed to load cities. Please check your internet.");
+    } finally {
+      setLoadingCities(false);
+    }
+  };
 
   // useEffect(() => {
   //   // If there's saved data (like user force-quit), prefill inputs
@@ -45,8 +81,13 @@ const SignupScreen = ({ navigation }) => {
       return Alert.alert("Error", "Passwords don't match");
     }
 
+    if (!selectedCity) {
+      return Alert.alert("Error", "Please select a city");
+    }
+
     // ✅ Save step progress
     dispatch(saveProgress({ step: 1, name, email, password }));
+    dispatch(setCity(selectedCity)); // Save city to Redux for global use
 
     navigation.navigate("SignupStep2", {
       name,
@@ -97,6 +138,29 @@ const SignupScreen = ({ navigation }) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+            />
+          </View>
+
+          {/* City Selection */}
+          <View style={[styles.inputContainer, { zIndex: 2000 }]}>
+            <Text style={styles.label}>Select City</Text>
+            <DropDownPicker
+              open={open}
+              value={selectedCity}
+              items={items}
+              setOpen={setOpen}
+              setValue={setSelectedCity}
+              setItems={setItems}
+              placeholder={loadingCities ? "Loading cities..." : "Select City"}
+              style={styles.dropdown}
+              textStyle={styles.dropdownText}
+              dropDownContainerStyle={styles.dropdownList}
+              listItemContainerStyle={styles.dropdownItem}
+              placeholderStyle={{ color: "#a0a0a0" }}
+              disabled={loadingCities}
+              listMode="SCROLLVIEW"
+              zIndex={3000}
+              zIndexInverse={1000}
             />
           </View>
 
@@ -231,6 +295,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     letterSpacing: 0.5,
+  },
+  dropdown: {
+    borderColor: "#ddd",
+    borderRadius: 5,
+    backgroundColor: "#fafafa",
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  dropdownList: {
+    borderColor: "#ddd",
+    backgroundColor: "#fafafa",
+  },
+  dropdownItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
 });
 

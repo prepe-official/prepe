@@ -131,16 +131,31 @@ const DashboardScreen = ({ navigation }) => {
       >
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <View style={styles.profileAvatar}>
+          <TouchableOpacity
+            style={styles.profileAvatar}
+            onPress={() => navigation.navigate("AccountSettings")}
+          >
             {dashboardData.image ? (
               <Image
                 source={{ uri: dashboardData.image }}
                 style={styles.profileAvatarImage}
               />
             ) : (
-              <Ionicons name="person-outline" size={40} color="#1b94e4" />
+              <View style={{ alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="camera-outline" size={24} color="#1b94e4" />
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color: "#1b94e4",
+                    marginTop: 2,
+                    fontWeight: "600",
+                  }}
+                >
+                  Add Photo
+                </Text>
+              </View>
             )}
-          </View>
+          </TouchableOpacity>
           <Text style={styles.greeting}>Hi, {dashboardData.name}</Text>
           {dashboardData.unreadNotifications > 0 && (
             <TouchableOpacity

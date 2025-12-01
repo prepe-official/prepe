@@ -92,7 +92,7 @@ const AccountSettingsScreen = () => {
       Alert.alert(
         "Error",
         err.response?.data?.message ||
-          "An error occurred while updating password."
+        "An error occurred while updating password."
       );
     } finally {
       setPasswordLoading(false);
@@ -144,7 +144,17 @@ const AccountSettingsScreen = () => {
     });
 
     if (!result.canceled) {
-      setNewImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      const asset = result.assets[0];
+      const fileSizeInMB = asset.fileSize / (1024 * 1024);
+
+      if (fileSizeInMB > 4.5) {
+        return Alert.alert(
+          "Error",
+          "Image size exceeds 4.5MB. Please choose a smaller image."
+        );
+      }
+
+      setNewImage(`data:image/jpeg;base64,${asset.base64}`);
     }
   };
 
@@ -188,7 +198,7 @@ const AccountSettingsScreen = () => {
       Alert.alert(
         "Error",
         error.response?.data?.message ||
-          "An error occurred while updating your profile."
+        "An error occurred while updating your profile."
       );
     } finally {
       setLoading(false);
@@ -235,7 +245,7 @@ const AccountSettingsScreen = () => {
               Alert.alert(
                 "Error",
                 error.response?.data?.message ||
-                  "An error occurred while deleting your account."
+                "An error occurred while deleting your account."
               );
             }
           },
@@ -306,7 +316,7 @@ const AccountSettingsScreen = () => {
             />
           </TouchableOpacity>
           <TouchableOpacity onPress={pickImage}>
-            <Text style={styles.editButton}>Edit</Text>
+            <Text style={styles.editButton}>Change Photo</Text>
           </TouchableOpacity>
         </View>
 
@@ -499,12 +509,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   profilePic: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: "#e0e0e0",
-    marginBottom: 10,
+    marginBottom: 15,
     overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#1b94e4",
   },
   profilePicImage: {
     width: "100%",
@@ -512,8 +526,8 @@ const styles = StyleSheet.create({
   },
   editButton: {
     fontSize: 16,
-    color: "#000",
-    fontWeight: "500",
+    color: "#1b94e4",
+    fontWeight: "600",
   },
   form: {
     width: "100%",
@@ -618,40 +632,40 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   modalOverlay: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.5)",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 9999,
-},
-modalContainer: {
-  width: "85%",
-  backgroundColor: "#fff",
-  borderRadius: 10,
-  padding: 20,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 4,
-  elevation: 5,
-},
-modalTitle: {
-  fontSize: 18,
-  fontWeight: "700",
-  marginBottom: 15,
-  textAlign: "center",
-},
-cancelText: {
-  marginTop: 15,
-  fontSize: 16,
-  fontWeight: "600",
-  color: "red",
-  textAlign: "center",
-},
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+  },
+  modalContainer: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  cancelText: {
+    marginTop: 15,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "red",
+    textAlign: "center",
+  },
 
 });
 

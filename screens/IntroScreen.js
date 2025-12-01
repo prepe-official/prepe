@@ -5,7 +5,7 @@ import BlueButton from "../components/BlueButton";
 
 const IntroScreen = ({ navigation }) => {
   const handleNext = () => {
-    navigation.navigate("CitySelection");
+    navigation.navigate("Login");
   };
 
   return (
