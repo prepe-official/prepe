@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Image,
   StyleSheet,
@@ -11,46 +11,60 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
-import { useSelector, useDispatch } from "react-redux";
-import { login as loginAction } from "../store/slices/userSlice";
-import {
-  registerForPushNotificationsAsync,
-  sendFCMTokenToServer,
-} from "../utils/notifications";
-import { clearProgress, saveProgress } from "../store/slices/signupSlice";
+import { Ionicons } from "@expo/vector-icons";
+import { useDispatch } from "react-redux";
+import { saveProgress } from "../store/slices/signupSlice";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
 const SignupScreenStep2 = ({ route, navigation }) => {
-  const { name, email, password } = route.params;
-  const selectedCity = useSelector((state) => state.city.selectedCity);
+  const { name, email, phone, sessionId: initialSessionId } = route.params;
   const dispatch = useDispatch();
-  const signupProgress = useSelector((state) => state.signup);
-  // stages: "form" -> "otp" -> "create"
-  const [stage, setStage] = useState("form");
-  const [resendTimer, setResendTimer] = useState(15);
 
-  // form fields
-  const [phone, setPhone] = useState(signupProgress.phone || "");
-  const [address, setAddress] = useState(signupProgress.address || "");
-
-  // otp fields
-  const [sessionId, setSessionId] = useState("");
-  const [otp, setOtp] = useState("");
-
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [sessionId, setSessionId] = useState(initialSessionId);
+  const [resendTimer, setResendTimer] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
-  // 1) Send OTP
-  const handleSendOtp = async () => {
-    if (!phone || !address) {
-      return Alert.alert("Error", "Please fill in all fields");
+  const inputRefs = useRef([]);
+
+  // Timer countdown
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
     }
-    if (!selectedCity) {
-      return Alert.alert("Error", "Please select a city first");
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleOtpChange = (value, index) => {
+    if (value.length > 1) {
+      value = value.charAt(value.length - 1);
     }
-    dispatch(saveProgress({ step: 2, phone, address }));
-    setIsLoading(true);
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyPress = (e, index) => {
+    if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsResending(true);
     try {
       const resp = await fetch(`${API_BASE}/utils/send-otp`, {
         method: "POST",
@@ -58,112 +72,52 @@ const SignupScreenStep2 = ({ route, navigation }) => {
         body: JSON.stringify({ phone }),
       });
       const result = await resp.json();
-      if (!result.success)
-        throw new Error(result.error || "Failed to send OTP");
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to resend OTP");
+      }
+
       setSessionId(result.sessionId);
-      setStage("otp");
-      setResendTimer(15);
+      setResendTimer(10);
+      setOtp(["", "", "", "", "", ""]);
+      Alert.alert("Success", "OTP sent successfully!");
     } catch (err) {
       Alert.alert("Error", err.message);
     } finally {
-      setIsLoading(false);
+      setIsResending(false);
     }
   };
 
-  // 2) Verify OTP
   const handleVerifyOtp = async () => {
-    if (!otp) return Alert.alert("Error", "Please enter the OTP");
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      return Alert.alert("Error", "Please enter the complete OTP");
+    }
+
     setIsLoading(true);
     try {
       const resp = await fetch(`${API_BASE}/utils/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, otp }),
+        body: JSON.stringify({ sessionId, otp: otpCode }),
       });
       const result = await resp.json();
-      if (!result.success)
+
+      if (!result.success) {
         throw new Error(result.error || "OTP verification failed");
-      setStage("create");
-    } catch (err) {
-      Alert.alert("Error", err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      }
 
-  useEffect(() => {
-    let interval;
-    if (stage === "otp" && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [stage, resendTimer]);
+      // Save progress
+      dispatch(saveProgress({ step: 2, name, email, phone }));
 
-  // 3) Navigate user
-
-  // 3) Final step: Create user, auto-login, and navigate
-  const handleCompleteSignup = async () => {
-    setIsLoading(true);
-    try {
-      // Construct the final payload for user creation
-      const payload = {
+      // Navigate to Step 3 (Address + Image)
+      navigation.navigate("SignupStep3", {
         name,
         email,
-        password,
-        phoneNumber: phone,
-        address,
-        city: selectedCity,
-      };
-
-      // Create the user
-      const resp = await fetch(`${API_BASE}/user/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        phone,
       });
-
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.message || "Registration failed");
-
-      // Auto-login immediately after successful signup
-      const loginResp = await fetch(`${API_BASE}/user/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const loginData = await loginResp.json();
-
-      if (loginResp.ok && loginData.success) {
-        dispatch(loginAction({ user: loginData.user, token: loginData.token }));
-
-        // Register for push notifications
-        const expoPushToken = await registerForPushNotificationsAsync();
-        if (expoPushToken) {
-          await sendFCMTokenToServer({
-            userId: loginData.user._id,
-            authToken: loginData.token,
-            expoPushToken,
-          });
-        }
-
-        // Clear the persisted signup form data
-        dispatch(clearProgress());
-
-        // Navigate to the main app, replacing the signup stack
-        navigation.replace("Main");
-      } else {
-        // Fallback: account created but auto-login failed
-        Alert.alert(
-          "Success",
-          "Account created successfully. Please login to continue."
-        );
-        navigation.navigate("Login");
-      }
     } catch (err) {
       Alert.alert("Error", err.message);
-      // navigation.navigate("Signup"); // Stay on step 2 if error, or go back to start? Stay is better for retry.
     } finally {
       setIsLoading(false);
     }
@@ -186,129 +140,106 @@ const SignupScreenStep2 = ({ route, navigation }) => {
         />
 
         <View style={styles.formContainer}>
-          {stage === "form" && (
-            <>
-              <Text style={styles.headerText}>
-                Create Account (Step 2 of 3)
-              </Text>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your phone number"
-                  placeholderTextColor="#a0a0a0"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                />
-              </View>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Address</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your address"
-                  placeholderTextColor="#a0a0a0"
-                  value={address}
-                  onChangeText={setAddress}
-                />
-              </View>
-              <TouchableOpacity
-                style={[styles.button, isLoading && { opacity: 0.6 }]}
-                onPress={handleSendOtp}
-                disabled={isLoading}
-              >
-                <Text style={styles.buttonText}>
-                  {isLoading ? "Sending OTP…" : "Send OTP"}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
+          <Text style={styles.headerText}>Create New Account</Text>
+          <Text style={styles.subHeaderText}>Verify Phone Number</Text>
 
-          {stage === "otp" && (
-            <>
-              <Text style={styles.headerText}>Verify Phone</Text>
-              <Text style={styles.infoText}>
-                To verify your mobile number we will provide otp with a phone
-                call. Make sure the number is correct.
+          {/* Info Banner */}
+          <View style={styles.infoBanner}>
+            <Ionicons name="information-circle-outline" size={20} color="#1b94e4" />
+            <Text style={styles.infoBannerText}>
+              You'll Receive The OTP Through A Phone Call.{"\n"}
+              Make Sure You're In Good Network Range{"\n"}
+              And A Quite Place.
+            </Text>
+          </View>
+
+          {/* OTP Code Label */}
+          <Text style={styles.otpLabel}>OTP Code</Text>
+
+          {/* OTP Input Boxes */}
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => (inputRefs.current[index] = ref)}
+                style={styles.otpInput}
+                value={digit}
+                onChangeText={(value) => handleOtpChange(value, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                selectTextOnFocus
+              />
+            ))}
+          </View>
+
+          {/* Resend Timer */}
+          <Text style={styles.timerText}>
+            Resend OTP in 00:{resendTimer.toString().padStart(2, "0")}
+          </Text>
+
+          {/* Resend OTP Button */}
+          <TouchableOpacity
+            style={[styles.resendButton, (resendTimer > 0 || isResending) && styles.resendButtonDisabled]}
+            onPress={handleResendOtp}
+            disabled={resendTimer > 0 || isResending}
+          >
+            {isResending ? (
+              <ActivityIndicator color="#1b94e4" size="small" />
+            ) : (
+              <Text style={[styles.resendButtonText, resendTimer > 0 && styles.resendButtonTextDisabled]}>
+                Resend OTP
               </Text>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>OTP Code</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter the OTP"
-                  placeholderTextColor="#a0a0a0"
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="number-pad"
-                />
-              </View>
-              <TouchableOpacity
-                style={[styles.button, isLoading && { opacity: 0.6 }]}
-                onPress={handleVerifyOtp}
-                disabled={isLoading}
-              >
-                <Text style={styles.buttonText}>
-                  {isLoading ? "Verifying…" : "Verify OTP"}
-                </Text>
-              </TouchableOpacity>
-              {resendTimer > 0 ? (
-                <Text style={styles.timerText}>
-                  Resend available in {resendTimer}s
-                </Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.goBackButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.goBackButtonText}>Go back</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.verifyButton, isLoading && styles.buttonDisabled]}
+              onPress={handleVerifyOtp}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <TouchableOpacity
-                  onPress={handleSendOtp}
-                  style={[styles.resendButton, isLoading && { opacity: 0.6 }]}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.resendText}>Resend OTP</Text>
-                </TouchableOpacity>
+                <Text style={styles.verifyButtonText}>Verify & Continue</Text>
               )}
-            </>
-          )}
-
-          {stage === "create" && (
-            <>
-              <Text style={styles.headerText}>Almost Done!</Text>
-              <Text style={styles.infoText}>
-                Phone verified. Click below to complete your registration.
-              </Text>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleCompleteSignup}
-                disabled={isLoading}
-              >
-                <Text style={styles.buttonText}>
-                  {isLoading ? "Creating Account..." : "Complete Sign Up"}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-          <View style={styles.loginContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-              <Text style={styles.loginLink}>Go Back</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
-      <Text style={styles.version}>Version 1.0.0</Text>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1b94e4" },
+  container: {
+    flex: 1,
+    backgroundColor: "#1b94e4",
+  },
   scrollContainer: {
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 40,
   },
-  logo: { width: 150, height: 150, marginBottom: 30 },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
   formContainer: {
-    width: "85%",
+    width: "90%",
     backgroundColor: "white",
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -317,78 +248,114 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#1b94e4",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  infoText: {
-    fontSize: 16,
     color: "#333",
     textAlign: "center",
-    marginBottom: 20,
   },
-  inputContainer: { marginBottom: 15 },
-  label: {
+  subHeaderText: {
     fontSize: 14,
-    color: "#333",
-    marginBottom: 5,
-    fontWeight: "500",
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 15,
   },
-  input: {
+  infoBanner: {
+    flexDirection: "row",
+    backgroundColor: "#E8F4FD",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  infoBannerText: {
+    fontSize: 12,
+    color: "#1b94e4",
+    marginLeft: 10,
+    lineHeight: 18,
+  },
+  otpLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  otpContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 15,
+  },
+  otpInput: {
+    width: 45,
+    height: 50,
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    fontSize: 16,
+    borderRadius: 8,
+    fontSize: 20,
+    fontWeight: "600",
+    textAlign: "center",
     backgroundColor: "#fafafa",
     color: "#333",
   },
-  button: {
-    backgroundColor: "#1b94e4",
-    borderRadius: 5,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  loginContainer: { flexDirection: "row", justifyContent: "center" },
-  loginLink: {
-    color: "#1b94e4",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  version: {
-    position: "absolute",
-    bottom: 20,
-    alignSelf: "center",
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
   timerText: {
     textAlign: "center",
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
-    marginTop: 10,
+    marginBottom: 10,
   },
   resendButton: {
     alignSelf: "center",
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginBottom: 20,
   },
-  resendText: {
-    color: "#1b94e4",
+  resendButtonDisabled: {
+    opacity: 0.5,
+  },
+  resendButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  resendButtonTextDisabled: {
+    color: "#999",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  goBackButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  goBackButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  verifyButton: {
+    flex: 1,
+    backgroundColor: "#1b94e4",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  verifyButtonText: {
+    color: "white",
     fontSize: 14,
     fontWeight: "600",
   },

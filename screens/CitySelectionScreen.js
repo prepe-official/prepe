@@ -3,16 +3,18 @@ import {
   StyleSheet,
   Text,
   View,
-  Image,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import BlueButton from "../components/BlueButton";
+import { Ionicons } from "@expo/vector-icons";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useDispatch } from "react-redux";
 import { setCity } from "../store/slices/citySlice";
 import axios from "axios";
+
+const { width, height } = Dimensions.get("window");
 
 export default function CitySelectionScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -37,7 +39,7 @@ export default function CitySelectionScreen({ navigation }) {
 
       if (data.success && data.configuration.supportedCities) {
         const cityItems = data.configuration.supportedCities.map((city) => ({
-          label: city.name,
+          label: city.isActive === false ? `${city.name} (Coming Soon)` : city.name,
           value: city.name,
           disabled: city.isActive === false,
         }));
@@ -54,67 +56,98 @@ export default function CitySelectionScreen({ navigation }) {
     }
   };
 
-  const handleContinue = () => {
+  const handleNext = () => {
     if (selectedCity) {
-      // Save selected city to Redux
       dispatch(setCity(selectedCity));
-      // Navigate to Main screen with the selected city
-      navigation.navigate("Main", { selectedCity });
+      navigation.navigate("Login");
     }
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
-      <Image
-        source={require("../assets/city.png")}
-        style={styles.backgroundBlob}
-      />
+      <StatusBar style="light" />
 
+      {/* Blue curved background */}
+      <View style={styles.blueBackground} />
+
+      {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.title}>Which city are you{"\n"}based of?</Text>
+        <View style={styles.centerContent}>
+          <Text style={styles.title}>Which city are you{"\n"}based of?</Text>
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Loading cities...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchCities}>
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.dropdownContainer}>
-            <DropDownPicker
-              open={open}
-              value={selectedCity}
-              items={items}
-              setOpen={setOpen}
-              setValue={setSelectedCity}
-              setItems={setItems}
-              placeholder="Select City"
-              style={styles.dropdown}
-              textStyle={styles.dropdownText}
-              dropDownContainerStyle={styles.dropdownList}
-              listItemContainerStyle={styles.dropdownItem}
-              placeholderStyle={styles.placeholderStyle}
-              disabledStyle={styles.disabledItem}
-              disabledItemLabelStyle={styles.disabledItemText}
-              zIndex={3000}
-              zIndexInverse={1000}
-            />
-          </View>
-        )}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#fff" />
+              <Text style={styles.loadingText}>Loading cities...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={fetchCities}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.dropdownContainer}>
+              <DropDownPicker
+                open={open}
+                value={selectedCity}
+                items={items}
+                setOpen={setOpen}
+                setValue={setSelectedCity}
+                setItems={setItems}
+                placeholder="Select a city"
+                style={styles.dropdown}
+                textStyle={styles.dropdownText}
+                dropDownContainerStyle={styles.dropdownList}
+                listItemContainerStyle={styles.dropdownItem}
+                listItemLabelStyle={styles.dropdownItemLabel}
+                selectedItemLabelStyle={styles.selectedItemLabel}
+                placeholderStyle={styles.placeholderStyle}
+                disabledStyle={styles.disabledItem}
+                disabledItemContainerStyle={styles.disabledItemContainer}
+                disabledItemLabelStyle={styles.disabledItemText}
+                zIndex={5000}
+                zIndexInverse={1000}
+                listMode="SCROLLVIEW"
+                scrollViewProps={{
+                  nestedScrollEnabled: true,
+                }}
+                maxHeight={250}
+                ArrowDownIconComponent={() => (
+                  <Ionicons name="chevron-down" size={22} color="#333" />
+                )}
+                ArrowUpIconComponent={() => (
+                  <Ionicons name="chevron-up" size={22} color="#333" />
+                )}
+              />
+            </View>
+          )}
 
-        <BlueButton
-          title="Continue"
-          onPress={handleContinue}
+          {/* Info text */}
+          <View style={styles.infoContainer}>
+            <Ionicons name="information-circle-outline" size={22} color="#fff" style={styles.infoIcon} />
+            <Text style={styles.infoText}>
+              Couldn't Able To Select Or Find Your City?{"\n"}
+              Its Because We're Growing And May Not Be{"\n"}
+              Available In Your City.
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Next Button - Fixed at bottom */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.nextButton,
+            (!selectedCity || loading) && styles.nextButtonDisabled,
+          ]}
+          onPress={handleNext}
           disabled={!selectedCity || loading}
-          style={styles.continueButton}
-        />
+        >
+          <Text style={styles.nextButtonText}>Next</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -125,66 +158,108 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  backgroundBlob: {
+  blueBackground: {
     position: "absolute",
-    width: "100%",
-    height: "80%",
-    top: "8%",
-    right: "0",
-    // resizeMode: "cover",
+    top: 0,
+    left: 0,
+    width: width * 1.5,
+    height: height * 0.75,
+    backgroundColor: "#1b94e4",
+    borderBottomRightRadius: width * 1.5,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 40,
+    paddingHorizontal: 24,
+    zIndex: 1,
+  },
+  centerContent: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    marginTop: -height * 0.08,
+    overflow: "visible",
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
     color: "#fff",
     textAlign: "center",
     marginBottom: 30,
+    lineHeight: 36,
   },
   dropdownContainer: {
     width: "100%",
-    position: "relative",
-    zIndex: 2000,
-    marginBottom: 30,
+    zIndex: 5000,
+    elevation: 5000,
+    marginBottom: 35,
   },
   dropdown: {
     backgroundColor: "#fff",
-    borderColor: "#E0E0E0",
-    borderRadius: 10,
+    borderColor: "#E5E5E5",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 52,
+    borderWidth: 1,
   },
   dropdownText: {
-    fontSize: 16,
-    color: "#000",
+    fontSize: 15,
+    color: "#333",
     fontWeight: "500",
   },
   dropdownList: {
     backgroundColor: "#fff",
-    borderColor: "#E0E0E0",
-    borderRadius: 10,
+    borderColor: "#E5E5E5",
+    borderRadius: 8,
+    borderWidth: 1,
+    elevation: 5000,
   },
   dropdownItem: {
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderBottomColor: "#F0F0F0",
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    height: 50,
+  },
+  dropdownItemLabel: {
+    fontSize: 16,
+    color: "#333",
+    lineHeight: 20,
   },
   placeholderStyle: {
-    color: "#555",
+    color: "#333",
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  selectedItemLabel: {
+    fontWeight: "600",
+    color: "#1b94e4",
   },
   disabledItem: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F8F8F8",
+    opacity: 1,
+  },
+  disabledItemContainer: {
+    backgroundColor: "#F8F8F8",
   },
   disabledItemText: {
-    color: "#AAAAAA",
+    color: "#999",
+    textDecorationLine: "none",
   },
-  continueButton: {
-    width: "100%",
-    position: "absolute",
-    bottom: 35,
+  infoContainer: {
+    alignItems: "center",
+    paddingHorizontal: 10,
+  },
+  infoIcon: {
+    marginBottom: 10,
+    opacity: 0.9,
+  },
+  infoText: {
+    fontSize: 13,
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 20,
+    opacity: 0.95,
   },
   loadingContainer: {
     alignItems: "center",
@@ -192,8 +267,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: 12,
+    fontSize: 15,
     color: "#fff",
     fontWeight: "500",
   },
@@ -203,21 +278,42 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   errorText: {
-    fontSize: 16,
-    color: "#FF6B6B",
+    fontSize: 15,
+    color: "#fff",
     textAlign: "center",
     marginBottom: 15,
     fontWeight: "500",
   },
   retryButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+    paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
   },
   retryButtonText: {
+    color: "#1b94e4",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  buttonContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 35,
+    paddingTop: 15,
+    backgroundColor: "#fff",
+  },
+  nextButton: {
+    backgroundColor: "#1b94e4",
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nextButtonDisabled: {
+    opacity: 0.6,
+  },
+  nextButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
   },
 });

@@ -131,7 +131,7 @@ const Header = ({ title }) => {
             style={styles.iconButton}
             onPress={goToNotifications}
           >
-            <Ionicons name="notifications-outline" size={26} color="#333" />
+            <Ionicons name="notifications-outline" size={26} color="#fff" />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -141,7 +141,7 @@ const Header = ({ title }) => {
             )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={toggleSidebar}>
-            <Ionicons name="options-outline" size={26} color="#333" />
+            <Ionicons name="options-outline" size={26} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -196,15 +196,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    backgroundColor: "#1994E5",
     position: "relative",
     height: 60,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#111",
+    color: "#fff",
   },
   headerIcons: {
     flexDirection: "row",

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   StyleSheet,
@@ -11,89 +11,63 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { saveProgress } from "../store/slices/signupSlice";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios";
-import DropDownPicker from "react-native-dropdown-picker";
-import { setCity } from "../store/slices/citySlice";
+
+const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
 const SignupScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const signupProgress = useSelector((state) => state.signup); // ✅ get persisted signup data
+  const signupProgress = useSelector((state) => state.signup);
 
   const [name, setName] = useState(signupProgress?.name || "");
   const [email, setEmail] = useState(signupProgress?.email || "");
-  const [password, setPassword] = useState(signupProgress?.password || "");
-  const [confirmPassword, setConfirmPassword] = useState(
-    signupProgress?.password || "" // autofill confirm if password exists
-  );
+  const [phone, setPhone] = useState(signupProgress?.phone || "");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // City Selection State
-  const [open, setOpen] = useState(false);
-  const [selectedCity, setSelectedCity] = useState(null);
-  const [items, setItems] = useState([]);
-  const [loadingCities, setLoadingCities] = useState(true);
+  const handleVerifyPhone = async () => {
+    if (!name.trim()) {
+      return Alert.alert("Error", "Please enter your username");
+    }
+    if (!email.trim()) {
+      return Alert.alert("Error", "Please enter your email");
+    }
+    if (!phone.trim() || phone.length < 10) {
+      return Alert.alert("Error", "Please enter a valid phone number");
+    }
 
-  useEffect(() => {
-    fetchCities();
-  }, []);
-
-  const fetchCities = async () => {
+    setIsLoading(true);
     try {
-      setLoadingCities(true);
-      const { data } = await axios.get(
-        `${process.env.EXPO_PUBLIC_API_URL}/configuration/get`
-      );
+      // Send OTP
+      const resp = await fetch(`${API_BASE}/utils/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const result = await resp.json();
 
-      if (data.success && data.configuration.supportedCities) {
-        const cityItems = data.configuration.supportedCities.map((city) => ({
-          label: city.name,
-          value: city.name,
-          disabled: city.isActive === false,
-        }));
-        setItems(cityItems);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send OTP");
       }
-    } catch (error) {
-      console.error("Error fetching cities:", error);
-      Alert.alert("Error", "Failed to load cities. Please check your internet.");
+
+      // Save progress
+      dispatch(saveProgress({ step: 1, name, email, phone }));
+
+      // Navigate to OTP screen
+      navigation.navigate("SignupStep2", {
+        name,
+        email,
+        phone,
+        sessionId: result.sessionId,
+      });
+    } catch (err) {
+      Alert.alert("Error", err.message);
     } finally {
-      setLoadingCities(false);
+      setIsLoading(false);
     }
-  };
-
-  // useEffect(() => {
-  //   // If there's saved data (like user force-quit), prefill inputs
-  //   if (signupProgress.step >= 1) {
-  //     setName(signupProgress.name || "");
-  //     setEmail(signupProgress.email || "");
-  //     setPassword(signupProgress.password || "");
-  //     setConfirmPassword(signupProgress.password || "");
-  //   }
-  // }, [signupProgress]);
-
-  const handleNextStep = () => {
-    if (!name || !email || !password || !confirmPassword) {
-      return Alert.alert("Error", "Please fill in all fields");
-    }
-
-    if (password !== confirmPassword) {
-      return Alert.alert("Error", "Passwords don't match");
-    }
-
-    if (!selectedCity) {
-      return Alert.alert("Error", "Please select a city");
-    }
-
-    // ✅ Save step progress
-    dispatch(saveProgress({ step: 1, name, email, password }));
-    dispatch(setCity(selectedCity)); // Save city to Redux for global use
-
-    navigation.navigate("SignupStep2", {
-      name,
-      email,
-      password,
-    });
   };
 
   return (
@@ -113,17 +87,29 @@ const SignupScreen = ({ navigation }) => {
         />
 
         <View style={styles.formContainer}>
-          <Text style={styles.headerText}>Create Account</Text>
+          <Text style={styles.headerText}>Create New Account</Text>
+          <Text style={styles.subHeaderText}>Provide Personal Detail</Text>
 
-          {/* Full Name */}
+          {/* Info Banner */}
+          <View style={styles.infoBanner}>
+            <Ionicons name="information-circle-outline" size={20} color="#1b94e4" />
+            <Text style={styles.infoBannerText}>
+              Please Provide Correct Details As This{"\n"}
+              Information Will Be Used By The Subscription{"\n"}
+              Provider To Reach You.
+            </Text>
+          </View>
+
+          {/* Username */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name</Text>
+            <Text style={styles.label}>Username</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your full name"
+              placeholder="Enter your username"
               placeholderTextColor="#a0a0a0"
               value={name}
               onChangeText={setName}
+              autoCapitalize="words"
             />
           </View>
 
@@ -141,68 +127,42 @@ const SignupScreen = ({ navigation }) => {
             />
           </View>
 
-          {/* City Selection */}
-          <View style={[styles.inputContainer, { zIndex: 2000 }]}>
-            <Text style={styles.label}>Select City</Text>
-            <DropDownPicker
-              open={open}
-              value={selectedCity}
-              items={items}
-              setOpen={setOpen}
-              setValue={setSelectedCity}
-              setItems={setItems}
-              placeholder={loadingCities ? "Loading cities..." : "Select City"}
-              style={styles.dropdown}
-              textStyle={styles.dropdownText}
-              dropDownContainerStyle={styles.dropdownList}
-              listItemContainerStyle={styles.dropdownItem}
-              placeholderStyle={{ color: "#a0a0a0" }}
-              disabled={loadingCities}
-              listMode="SCROLLVIEW"
-              zIndex={3000}
-              zIndexInverse={1000}
-            />
-          </View>
-
-          {/* Password */}
+          {/* Contact Number */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>Contact Number</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your password"
+              placeholder="Enter your phone number"
               placeholderTextColor="#a0a0a0"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              maxLength={10}
             />
           </View>
 
-          {/* Confirm Password */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm your password"
-              placeholderTextColor="#a0a0a0"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-            />
-          </View>
-
-          <TouchableOpacity style={styles.button} onPress={handleNextStep}>
-            <Text style={styles.buttonText}>Next</Text>
+          {/* Verify Phone Number Button */}
+          <TouchableOpacity
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+            onPress={handleVerifyPhone}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Verify Phone Number</Text>
+            )}
           </TouchableOpacity>
 
+          {/* Login Link */}
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-              <Text style={styles.loginLink}>Login</Text>
+              <Text style={styles.loginLink}>Log In</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
-      <Text style={styles.version}>Version 1.0.0</Text>
     </KeyboardAvoidingView>
   );
 };
@@ -219,14 +179,14 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   logo: {
-    width: 150,
-    height: 150,
-    marginBottom: 30,
+    width: 120,
+    height: 120,
+    marginBottom: 20,
   },
   formContainer: {
-    width: "85%",
+    width: "90%",
     backgroundColor: "white",
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -235,39 +195,62 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#1b94e4",
-    marginBottom: 20,
+    color: "#333",
     textAlign: "center",
+  },
+  subHeaderText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  infoBanner: {
+    flexDirection: "row",
+    backgroundColor: "#E8F4FD",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  infoBannerText: {
+    fontSize: 12,
+    color: "#1b94e4",
+    marginLeft: 10,
+    lineHeight: 18,
   },
   inputContainer: {
     marginBottom: 15,
   },
   label: {
-    fontSize: 14,
-    color: "#333",
-    marginBottom: 5,
+    fontSize: 13,
+    color: "#555",
+    marginBottom: 6,
     fontWeight: "500",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 5,
-    paddingVertical: 12,
+    borderRadius: 8,
+    paddingVertical: 14,
     paddingHorizontal: 15,
-    fontSize: 16,
+    fontSize: 15,
     backgroundColor: "#fafafa",
     color: "#333",
   },
   button: {
     backgroundColor: "#1b94e4",
-    borderRadius: 5,
-    paddingVertical: 14,
+    borderRadius: 8,
+    paddingVertical: 15,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
     marginTop: 10,
+    marginBottom: 15,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: "white",
@@ -279,39 +262,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   loginText: {
-    color: "#333",
+    color: "#666",
     fontSize: 14,
   },
   loginLink: {
     color: "#1b94e4",
     fontSize: 14,
     fontWeight: "700",
-  },
-  version: {
-    position: "absolute",
-    bottom: 20,
-    alignSelf: "center",
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  dropdown: {
-    borderColor: "#ddd",
-    borderRadius: 5,
-    backgroundColor: "#fafafa",
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  dropdownList: {
-    borderColor: "#ddd",
-    backgroundColor: "#fafafa",
-  },
-  dropdownItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    textDecorationLine: "underline",
   },
 });
 

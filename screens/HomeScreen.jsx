@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   StyleSheet,
   View,
@@ -8,11 +8,15 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  StatusBar,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Header";
 import { useSelector } from "react-redux";
 import axios from "axios";
+
+const { width: screenWidth } = Dimensions.get("window");
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useSelector((state) => state.user);
@@ -24,17 +28,31 @@ const HomeScreen = ({ navigation }) => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [heroImage, setHeroImage] = useState(null);
+  const [carouselItems, setCarouselItems] = useState([]);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  const carouselRef = useRef(null);
+  const autoScrollTimer = useRef(null);
 
   const fetchConfiguration = useCallback(async () => {
     try {
       const { data } = await axios.get(
         `${process.env.EXPO_PUBLIC_API_URL}/configuration/get`
       );
-      if (data.success && data.configuration.heroImage) {
-        setHeroImage(data.configuration.heroImage);
+      if (data.success) {
+        // Filter out items without valid images
+        const validItems = (data.configuration.carouselItems || []).filter(
+          (item) => item.image && item.image.trim() !== ""
+        );
+        if (validItems.length > 0) {
+          setCarouselItems(validItems);
+        } else if (data.configuration.heroImage) {
+          // Fallback to legacy heroImage
+          setHeroImage(data.configuration.heroImage);
+        }
       }
     } catch (error) {
-      console.error("Failed to fetch hero image configuration:", error);
+      console.error("Failed to fetch configuration:", error);
     }
   }, []);
 
@@ -115,8 +133,45 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate("Search", { initialQuery });
   };
 
+  // Carousel auto-scroll
+  useEffect(() => {
+    if (carouselItems.length > 1) {
+      autoScrollTimer.current = setInterval(() => {
+        setActiveSlide((prev) => {
+          const nextSlide = (prev + 1) % carouselItems.length;
+          carouselRef.current?.scrollTo({
+            x: nextSlide * (screenWidth - 32),
+            animated: true,
+          });
+          return nextSlide;
+        });
+      }, 4000);
+    }
+    return () => {
+      if (autoScrollTimer.current) {
+        clearInterval(autoScrollTimer.current);
+      }
+    };
+  }, [carouselItems.length]);
+
+  const handleCarouselScroll = (event) => {
+    const slideWidth = screenWidth - 32;
+    const offset = event.nativeEvent.contentOffset.x;
+    const currentIndex = Math.round(offset / slideWidth);
+    if (currentIndex !== activeSlide && currentIndex >= 0 && currentIndex < carouselItems.length) {
+      setActiveSlide(currentIndex);
+    }
+  };
+
+  const handleCarouselPress = (item) => {
+    if (item.packId) {
+      navigation.navigate("ProductDetail", { packId: item.packId });
+    }
+  };
+
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1994E5" />
       {loading && (
         <View style={styles.fullscreenLoader}>
           <ActivityIndicator size="large" color="#000" />
@@ -171,17 +226,61 @@ const HomeScreen = ({ navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Promo Banner */}
-        <View style={styles.promoBanner}>
-          <Image
-            source={
-              heroImage
-                ? { uri: heroImage }
-                : require("../assets/home-offer.png")
-            }
-            style={styles.promoBannerImage}
-            resizeMode="contain"
-          />
+        {/* Promo Banner Carousel */}
+        <View style={styles.carouselContainer}>
+          {carouselItems.length > 0 ? (
+            <>
+              <ScrollView
+                ref={carouselRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={handleCarouselScroll}
+                scrollEventThrottle={16}
+                style={styles.carousel}
+              >
+                {carouselItems.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    activeOpacity={item.packId ? 0.8 : 1}
+                    onPress={() => handleCarouselPress(item)}
+                    style={styles.carouselSlide}
+                  >
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.carouselImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              {carouselItems.length > 1 && (
+                <View style={styles.dotsContainer}>
+                  {carouselItems.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.dot,
+                        activeSlide === index && styles.activeDot,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.promoBanner}>
+              <Image
+                source={
+                  heroImage
+                    ? { uri: heroImage }
+                    : require("../assets/home-offer.png")
+                }
+                style={styles.promoBannerImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
         </View>
 
         {/* Products Grid */}
@@ -198,10 +297,19 @@ const HomeScreen = ({ navigation }) => {
                   })
                 }
               >
-                <Image
-                  source={{ uri: product.images[0] }}
-                  style={styles.productImage}
-                />
+                <View style={styles.productImageContainer}>
+                  <Image
+                    source={{ uri: product.images[0] }}
+                    style={styles.productImage}
+                  />
+                  {product.strikeoutPrice && product.strikeoutPrice > product.price && (
+                    <View style={styles.saveTag}>
+                      <Text style={styles.saveTagText}>
+                        Rs. {Math.round(product.strikeoutPrice - product.price)} OFF
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.productName}>{product.name}</Text>
                 <Text style={styles.productDescription}>
                   {product.quantity} {product.unit}/{product.duration}
@@ -218,7 +326,7 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#f7f7f7",
   },
   searchContainer: {
     flexDirection: "row",
@@ -230,6 +338,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 5,
     marginTop: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchIcon: {
     marginRight: 8,
@@ -270,8 +383,45 @@ const styles = StyleSheet.create({
   selectedCategoryText: {
     fontWeight: "700",
   },
-  promoBanner: {
+  carouselContainer: {
     marginHorizontal: 16,
+    marginBottom: 10,
+  },
+  carousel: {
+    borderRadius: 15,
+    overflow: "hidden",
+  },
+  carouselSlide: {
+    width: screenWidth - 32,
+    height: 170,
+    borderRadius: 15,
+    overflow: "hidden",
+  },
+  carouselImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 15,
+  },
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#ccc",
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: "#1994E5",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  promoBanner: {
     borderRadius: 15,
     overflow: "hidden",
   },
@@ -292,11 +442,38 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   productCard: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F7F7F7",
     borderRadius: 12,
     overflow: "hidden",
     width: "48%",
     marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  productImageContainer: {
+    position: "relative",
+  },
+  saveTag: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "#FF6B35",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  saveTagText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
   },
   productImage: {
     width: "100%",

@@ -316,24 +316,30 @@ const ProductDetailScreen = ({ navigation, route }) => {
   const skippedDays =
     product?.isSubscribed && product?.subscription?.skippedDates
       ? (() => {
-          const now = new Date();
-          const currentMonth = now.getMonth() + 1;
-          const currentYear = now.getFullYear();
-          return product.subscription.skippedDates
-            .map((d) => d.substring(0, 10)) // "YYYY-MM-DD"
-            .filter((dateStr) => {
-              const [year, month] = dateStr.split("-").map(Number);
-              return year === currentYear && month === currentMonth;
-            })
-            .map((dateStr) => Number(dateStr.substring(8, 10)))
-            .sort((a, b) => a - b);
-        })()
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        return product.subscription.skippedDates
+          .map((d) => d.substring(0, 10)) // "YYYY-MM-DD"
+          .filter((dateStr) => {
+            const [year, month] = dateStr.split("-").map(Number);
+            return year === currentYear && month === currentMonth;
+          })
+          .map((dateStr) => Number(dateStr.substring(8, 10)))
+          .sort((a, b) => a - b);
+      })()
       : [];
 
-  const images =
-    product?.images?.length > 0
-      ? [...product.images, ...(product.vendorId?.shopImages || [])]
+  const images = (() => {
+    const allImages = [
+      ...(product?.images || []),
+      ...(product?.vendorId?.shopImages || []),
+    ].filter((img) => img && img.trim() !== "");
+
+    return allImages.length > 0
+      ? allImages
       : ["https://images.unsplash.com/photo-1563636619-e9143da7973b"];
+  })();
 
   const viewabilityConfig = useRef({
     viewAreaCoveragePercentThreshold: 50,
@@ -707,12 +713,23 @@ const ProductDetailScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.priceContainer}>
-            {/* <Text style={styles.originalPrice}>
-              Rs. {product?.strikeoutPrice}
-            </Text> */}
-            <Text style={styles.discountedPrice}>
-              Rs. {product?.price}/Month
-            </Text>
+            {product?.strikeoutPrice && product?.strikeoutPrice > product?.price && (
+              <View style={styles.saveTag}>
+                <Text style={styles.saveTagText}>
+                  Rs. {Math.round(product.strikeoutPrice - product.price)} OFF
+                </Text>
+              </View>
+            )}
+            <View style={styles.priceRow}>
+              {product?.strikeoutPrice && product?.strikeoutPrice > product?.price && (
+                <Text style={styles.originalPrice}>
+                  Rs. {Math.round(product.strikeoutPrice)}
+                </Text>
+              )}
+              <Text style={styles.discountedPrice}>
+                Rs. {Math.round(product?.price)}/Month
+              </Text>
+            </View>
           </View>
 
           <View style={styles.descriptionContainer}>
@@ -781,7 +798,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
               <View style={styles.ownerInfo}>
                 <View style={styles.ownerImageContainer}>
                   <Image
-                    source={{ uri: product?.vendorId?.image }}
+                    source={{ uri: product?.vendorId?.image || "https://via.placeholder.com/100" }}
                     style={styles.ownerImage}
                   />
                 </View>
@@ -1745,16 +1762,33 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   priceContainer: {
+    marginBottom: 15,
+  },
+  saveTag: {
+    backgroundColor: "#E8F4FD",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  saveTagText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1994E5",
+  },
+  priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
   },
   originalPrice: {
     fontSize: 16,
-    color: "#333",
+    color: "#888",
     fontWeight: "600",
     textDecorationLine: "line-through",
-    marginRight: 10,
+    marginRight: 8,
   },
   discountedPrice: {
     fontSize: 16,

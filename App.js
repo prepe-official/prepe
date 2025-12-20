@@ -44,6 +44,7 @@ import CustomerSupportScreen from "./screens/CustomerSupportScreen";
 import PaymentWebViewScreen from "./screens/PaymentWebViewScreen";
 import ForgotPasswordScreen from "./screens/ForgetScreen";
 import SignupScreenStep3 from "./screens/SignupScreenStep3";
+import SignupScreenStep4 from "./screens/SignupScreenStep4";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -248,6 +249,10 @@ export default function App() {
                 <Stack.Screen
                   name="SignupStep3"
                   component={SignupScreenStep3}
+                />
+                <Stack.Screen
+                  name="SignupStep4"
+                  component={SignupScreenStep4}
                 />
                 <Stack.Screen name="Forget" component={ForgotPasswordScreen} />
                 <Stack.Screen
