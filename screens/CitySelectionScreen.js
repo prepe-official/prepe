@@ -59,7 +59,10 @@ export default function CitySelectionScreen({ navigation }) {
   const handleNext = () => {
     if (selectedCity) {
       dispatch(setCity(selectedCity));
-      navigation.navigate("Login");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Main" }],
+      });
     }
   };
 

@@ -4,17 +4,21 @@ import { useSelector } from "react-redux";
 
 const SplashScreen = ({ navigation }) => {
   const { isLoggedIn } = useSelector((state) => state.user);
+  const { selectedCity } = useSelector((state) => state.city);
 
   useEffect(() => {
     // Check login status and navigate accordingly after splash screen
     setTimeout(() => {
       if (isLoggedIn) {
-        navigation.navigate("Main");
+        navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      } else if (selectedCity) {
+        // User has selected a city before (guest user returning)
+        navigation.reset({ index: 0, routes: [{ name: "Main" }] });
       } else {
         navigation.navigate("Intro");
       }
     }, 2000); // 2 seconds splash screen
-  }, [isLoggedIn, navigation]);
+  }, [isLoggedIn, selectedCity, navigation]);
 
   return (
     <View style={styles.container}>
