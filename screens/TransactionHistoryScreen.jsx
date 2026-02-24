@@ -130,8 +130,9 @@ const TransactionHistoryScreen = () => {
           {item.packId?.name || "Subscription"}
         </Text>
         <Text style={styles.transactionQuantity}>
-          {item.packId?.quantity || ""} {item.packId?.unit || ""} /{" "}
-          {item.packId?.duration || ""}
+          {item.packId?.packType !== "service"
+            ? `${item.packId?.quantity || ""} ${item.packId?.unit || ""} / ${item.packId?.duration || ""}`
+            : item.packId?.duration || ""}
         </Text>
         <Text style={styles.transactionAmount}>Rs. {item.amount}</Text>
       </View>

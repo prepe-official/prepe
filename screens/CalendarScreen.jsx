@@ -135,7 +135,9 @@ const CalendarScreen = () => {
     .map((sub) => ({
       packId: sub.packId._id,
       name: sub.packId.name,
-      quantity: `${sub.packId.quantity} ${sub.packId.unit} / ${sub.packId.duration}`,
+      quantity: sub.packId.packType !== "service"
+        ? `${sub.packId.quantity} ${sub.packId.unit} / ${sub.packId.duration}`
+        : sub.packId.duration,
       price: `Rs.${sub.packId.totalAmount} / Month`,
       date: new Date(sub.createdAt)
         .toLocaleDateString("en-GB")
@@ -145,7 +147,9 @@ const CalendarScreen = () => {
   const expiringPacks = expiringSubscriptions.map((sub) => ({
     packId: sub.packId._id,
     name: sub.packId.name,
-    quantity: `${sub.packId.quantity} ${sub.packId.unit} / ${sub.packId.duration}`,
+    quantity: sub.packId.packType !== "service"
+      ? `${sub.packId.quantity} ${sub.packId.unit} / ${sub.packId.duration}`
+      : sub.packId.duration,
     price: `Rs.${sub.totalAmount} / Month`,
     date: new Date(sub.expiryDate)
       .toLocaleDateString("en-GB")
@@ -167,7 +171,9 @@ const CalendarScreen = () => {
     .map((sub) => ({
       packId: sub.packId._id,
       name: sub.packId.name,
-      quantity: `${sub.packId.quantity} ${sub.packId.unit} / ${sub.packId.duration}`,
+      quantity: sub.packId.packType !== "service"
+        ? `${sub.packId.quantity} ${sub.packId.unit} / ${sub.packId.duration}`
+        : sub.packId.duration,
       skippedDates: sub.skippedDates
         .map((dateStr) => new Date(dateStr))
         .filter(

@@ -21,6 +21,30 @@ const WalletScreen = () => {
   const { user, token } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const [refreshing, setRefreshing] = useState(false);
+  const [supportEmail, setSupportEmail] = useState("Support@Prepe.In");
+  const [supportPhone, setSupportPhone] = useState("+91 9685504916");
+
+  const fetchConfiguration = useCallback(async () => {
+    try {
+      const { data } = await axios.get(
+        `${process.env.EXPO_PUBLIC_API_URL}/configuration/get`
+      );
+      if (data.success && data.configuration?.customerSupport) {
+        if (data.configuration.customerSupport.email) {
+          setSupportEmail(data.configuration.customerSupport.email);
+        }
+        if (data.configuration.customerSupport.phone) {
+          setSupportPhone(data.configuration.customerSupport.phone);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch configuration:", error);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchConfiguration();
+  }, [fetchConfiguration]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -88,9 +112,17 @@ const WalletScreen = () => {
       {/* Note Section */}
       <View style={styles.noteCard}>
         <Ionicons name="alert-circle-outline" size={20} color="#e63946" />
-        <Text style={styles.noteText}>
-          Once added, you will not be able to withdraw the amount.
-        </Text>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.noteText}>
+            Once added, you will not be able to withdraw the amount.
+          </Text>
+          <Text style={[styles.noteText, { marginTop: 8 }]}>
+            The Amount Available In The Wallet Can Only Be Used To Subscribe
+            Packs Available In This Platform (Mobile Application). During The
+            Time Of Closing The Account Permanently Please Reach Out To Our
+            Support Team At - {supportEmail} Or Call Us At {supportPhone}
+          </Text>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -169,7 +201,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   noteText: {
-    marginLeft: 10,
     color: "#e63946",
     fontSize: 14,
     flex: 1,

@@ -1,41 +1,52 @@
-// ../components/CashbackModal.js
-
-import React, { useEffect, useRef } from "react";
-import { Modal, View, Text, StyleSheet } from "react-native";
-import LottieView from "lottie-react-native";
+import React from "react";
+import {
+  Modal,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import BlueButton from "./BlueButton";
 
-const CashbackModal = ({ visible, amount, onClose }) => {
-  const animation = useRef(null);
-
-  useEffect(() => {
-    // Play the animation when the modal becomes visible
-    if (visible) {
-      animation.current?.play();
-    }
-  }, [visible]);
-
+const CashbackModal = ({ visible, amount, onClose, packName }) => {
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
       <View style={styles.modalOverlay}>
-        {/* Lottie Animation as background */}
-        <LottieView
-          ref={animation}
-          source={require("../assets/confetti.json")} // Make sure this path is correct!
-          autoPlay={false}
-          loop={false}
-          style={styles.lottie}
-          resizeMode="cover"
-        />
         <View style={styles.modalContent}>
-          <Text style={styles.title}>Congratulations! 🎉</Text>
-          <Text style={styles.subtitle}>You've won a cashback of</Text>
-          <Text style={styles.amountText}>₹{amount}</Text>
-          <Text style={styles.infoText}>
-            The amount has been credited to your wallet.
+          {/* Close Button */}
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Ionicons name="close-circle-outline" size={28} color="#333" />
+          </TouchableOpacity>
+
+          {/* Title */}
+          <Text style={styles.title}>Subscribed</Text>
+
+          {/* Subtitle */}
+          <Text style={styles.subtitle}>
+            You've successfully Subscribed to {packName || "this pack"}
           </Text>
+
+          {/* Info Box */}
+          <View style={styles.infoBox}>
+            <Ionicons
+              name="information-circle"
+              size={24}
+              color="#333"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>
+              The first cycle of subscription will be a trial period. You'll be
+              notified at the expiring date of the pack. At that time you can
+              choose to continue or unsubscribe the pack.{"\n"}Note: You'll not
+              be notified of the expiring date of pack from 2nd cycle of the
+              pack
+            </Text>
+          </View>
+
+          {/* Okay Button */}
           <BlueButton
-            title="Awesome!"
+            title="Okay"
             onPress={onClose}
             style={{ width: "100%", marginTop: 20 }}
           />
@@ -48,59 +59,55 @@ const CashbackModal = ({ visible, amount, onClose }) => {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 80, 150, 0.85)", // A deep blue semi-transparent overlay
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
-  lottie: {
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    width: "100%",
+    position: "relative",
+  },
+  closeButton: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 12,
+    right: 12,
     zIndex: 1,
   },
-  modalContent: {
-    zIndex: 2, // Ensure content is above the Lottie animation
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 25,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    width: "100%",
-  },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#1E3A8A", // A dark blue for contrast
+    color: "#000",
+    marginTop: 10,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#4B5563", // A neutral gray
+    fontSize: 14,
+    color: "#333",
+    textAlign: "center",
     marginBottom: 16,
+    fontWeight: "600",
   },
-  amountText: {
-    fontSize: 48,
-    fontWeight: "900",
-    color: "#22C55E", // A vibrant green for the amount
-    marginBottom: 16,
-    textShadowColor: "rgba(0, 0, 0, 0.1)",
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 1,
+  infoBox: {
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 10,
+    padding: 16,
+    width: "100%",
+    alignItems: "center",
+  },
+  infoIcon: {
+    marginBottom: 8,
   },
   infoText: {
-    fontSize: 14,
-    color: "#4B5563",
+    fontSize: 13,
+    color: "#333",
     textAlign: "center",
+    lineHeight: 20,
   },
 });
 

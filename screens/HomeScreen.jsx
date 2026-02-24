@@ -164,7 +164,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleCarouselPress = (item) => {
-    if (item.packId) {
+    if (item.packId && item.packId !== "") {
       navigation.navigate("ProductDetail", { packId: item.packId });
     }
   };
@@ -249,7 +249,7 @@ const HomeScreen = ({ navigation }) => {
                     <Image
                       source={{ uri: item.image }}
                       style={styles.carouselImage}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                   </TouchableOpacity>
                 ))}
@@ -312,7 +312,9 @@ const HomeScreen = ({ navigation }) => {
                 </View>
                 <Text style={styles.productName}>{product.name}</Text>
                 <Text style={styles.productDescription}>
-                  {product.quantity} {product.unit}/{product.duration}
+                  {product.packType !== "service"
+                    ? `${product.quantity} ${product.unit}/${product.duration}`
+                    : product.duration}
                 </Text>
               </TouchableOpacity>
             ))}

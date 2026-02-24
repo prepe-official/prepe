@@ -188,7 +188,7 @@ const NotificationScreen = ({ navigation }) => {
             )}
           </View>
           <Text style={styles.dateText}>{dateText}</Text>
-          {item.packId && (
+          {item.packId && item.packId.packType !== "service" && (
             <Text style={styles.quantityText}>
               {item.packId.quantity} {item.packId.unit}/{item.packId.duration}
             </Text>
@@ -320,7 +320,7 @@ const NotificationScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {selectedNotification?.packId && (
+            {selectedNotification?.packId && selectedNotification.packId.packType !== "service" && (
               <Text style={styles.quantityText}>
                 {selectedNotification.packId.quantity}{" "}
                 {selectedNotification.packId.unit}/
@@ -474,10 +474,10 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   dateText: {
-  fontSize: 12,
-  color: "#666",
-  marginBottom: 6,
-},
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 6,
+  },
 
   messageText: {
     fontSize: 14,

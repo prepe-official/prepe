@@ -54,7 +54,9 @@ const SubscriptionsScreen = () => {
           id: order._id,
           packId: order.packId._id,
           name: order.packId.name,
-          quantity: `${order.packId.quantity} ${order.packId.unit}`,
+          quantity: order.packId.packType !== "service"
+            ? `${order.packId.quantity} ${order.packId.unit}`
+            : "",
           deliveryDate: new Date(order.deliveryDate).toLocaleDateString(
             "en-GB"
           ),
@@ -87,7 +89,9 @@ const SubscriptionsScreen = () => {
           id: sub._id,
           packId: sub.packId._id,
           name: sub.packId.name,
-          quantity: `${sub.packId.quantity} ${sub.packId.unit} / Day`,
+          quantity: sub.packId.packType !== "service"
+            ? `${sub.packId.quantity} ${sub.packId.unit} / Day`
+            : "",
           subscriptionDate: new Date(sub.createdAt).toLocaleDateString("en-GB"),
           expiryDate: new Date(sub.expiryDate).toLocaleDateString("en-GB"),
           price: sub.packId.totalAmount,
@@ -165,7 +169,7 @@ const SubscriptionsScreen = () => {
       setSubscriptions(originalSubscriptions);
       setError(
         err.response?.data?.message ||
-          "An error occurred while updating autopay."
+        "An error occurred while updating autopay."
       );
       console.error(err);
     }

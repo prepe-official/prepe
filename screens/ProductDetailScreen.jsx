@@ -656,7 +656,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
               <Image
                 source={{ uri: item }}
                 style={styles.productImage}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             )}
             keyExtractor={(item, index) => index.toString()}
@@ -687,27 +687,25 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 {product?.category || "Dairy"}
               </Text>
             </View>
-            {averageRating > 0 && (
-              <View style={styles.ratingsTag}>
-                <Text style={styles.ratingsText}>
-                  <Ionicons name="star" size={12} color="#FFD700" />
-                  {averageRating.toFixed(1)}
-                </Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.mainInfoContainer}>
             <View style={styles.leftInfo}>
               <Text style={styles.productName}>{product?.name}</Text>
-              <Text style={styles.productDescription}>
-                {product?.quantity} {product?.unit}/{product?.duration}
-              </Text>
             </View>
             <View style={styles.rightInfo}>
-              <Text style={styles.deliveryTimeLabel}>Availability</Text>
-              <Text style={styles.deliveryTime}>
-                {product?.deliveryTimeStart} - {product?.deliveryTimeEnd}
+              {averageRating > 0 && (
+                <View style={styles.ratingsTag}>
+                  <Text style={styles.ratingsText}>
+                    <Ionicons name="star" size={12} color="#FFD700" />
+                    {averageRating.toFixed(1)}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.productDescription}>
+                {product?.packType !== "service"
+                  ? `${product?.quantity} ${product?.unit}/${product?.duration}`
+                  : product?.duration}
               </Text>
             </View>
           </View>
@@ -736,12 +734,14 @@ const ProductDetailScreen = ({ navigation, route }) => {
             <Text style={styles.descText}>{product?.description}</Text>
           </View>
 
-          <View style={styles.includeContainer}>
-            <Text style={styles.includeText}>
-              Pack Include -{" "}
-              {product?.products.map((product) => product).join(", ")}
-            </Text>
-          </View>
+          {product?.packType !== "service" && (
+            <View style={styles.includeContainer}>
+              <Text style={styles.includeText}>
+                Pack Include -{" "}
+                {product?.products.map((product) => product).join(", ")}
+              </Text>
+            </View>
+          )}
 
           {product?.isSubscribed && product?.isConfirmed ? (
             <View style={styles.subscriptionInfoContainer}>
@@ -786,12 +786,12 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 </>
               )}
             </View>
-          ) : (
+          ) : product?.packType !== "service" ? (
             <Text style={styles.benefitsText}>
               You'll get your benefits deliver within 24 hours. After that it'll
               be delivered at the time mentioned by the provider.
             </Text>
-          )}
+          ) : null}
 
           <View style={styles.ownerInfoContainer}>
             <View style={styles.ownerLeftSection}>
@@ -909,106 +909,107 @@ const ProductDetailScreen = ({ navigation, route }) => {
             ))}
           </View>
         </View>
-      </ScrollView>
-      {product?.isExpired ? (
-        <View style={styles.footer}>
-          <BlueButton
-            title="Renew"
-            onPress={() => {
-              if (isLoggedIn) {
-                setShowRenewModal(true);
-              } else {
-                navigation.navigate("Login");
-              }
-            }}
-            style={styles.subscribeButton}
-          />
-        </View>
-      ) : product?.isSubscribed ? (
-        product.isConfirmed === false ? (
-          product.canCancel ? (
-            <View style={styles.subscribedFooter}>
-              <TouchableOpacity
-                style={styles.cancelOrderButton}
-                onPress={() => setShowCancelOrderModal(true)}
-              >
-                <Ionicons
-                  name="close"
-                  size={22}
-                  color="#fff"
-                  style={{ marginRight: 5 }}
-                />
-                <Text style={styles.cancelOrderButtonText}>Cancel Order</Text>
-              </TouchableOpacity>
-            </View>
-          ) : product.isDelivered ? (
-            <View style={styles.subscribedFooter}>
-              <Text style={styles.waitingMessage}>
-                Please Confirm the Order from the Notifications
-              </Text>
-            </View>
+      </ScrollView >
+      {
+        product?.isExpired ? (
+          <View style={styles.footer} >
+            <BlueButton
+              title="Renew"
+              onPress={() => {
+                if (isLoggedIn) {
+                  setShowRenewModal(true);
+                } else {
+                  navigation.navigate("Login");
+                }
+              }}
+              style={styles.subscribeButton}
+            />
+          </View>
+        ) : product?.isSubscribed ? (
+          product.isConfirmed === false ? (
+            product.canCancel ? (
+              <View style={styles.subscribedFooter}>
+                <TouchableOpacity
+                  style={styles.cancelOrderButton}
+                  onPress={() => setShowCancelOrderModal(true)}
+                >
+                  <Ionicons
+                    name="close"
+                    size={22}
+                    color="#fff"
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={styles.cancelOrderButtonText}>Cancel Order</Text>
+                </TouchableOpacity>
+              </View>
+            ) : product.isDelivered ? (
+              <View style={styles.subscribedFooter}>
+                <Text style={styles.waitingMessage}>
+                  Please Confirm the Order from the Notifications
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.subscribedFooter}>
+                <Text style={styles.waitingMessage}>
+                  Waiting for provider to provide the benefits
+                </Text>
+              </View>
+            )
           ) : (
             <View style={styles.subscribedFooter}>
-              <Text style={styles.waitingMessage}>
-                Waiting for provider to provide the benefits
-              </Text>
+              {product?.isSkipBenefits && (
+                <TouchableOpacity
+                  style={styles.skipButton}
+                  onPress={() => {
+                    onOpenSkipModal();
+                  }}
+                >
+                  <Text style={styles.skipButtonText}>Skip</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.unsubscribeButton,
+                  !product?.isSkipBenefits && { flex: 1 }, // take full width if skip not visible
+                ]}
+                onPress={() => setShowUnsubscribeModal(true)}
+              >
+                <Text style={styles.unsubscribeButtonText}>Unsubscribe</Text>
+                <View style={styles.unsubscribeIconContainer}>
+                  <Ionicons name="alert" size={16} color="#FF4D4D" />
+                </View>
+              </TouchableOpacity>
             </View>
           )
         ) : (
-          <View style={styles.subscribedFooter}>
-            {product?.isSkipBenefits && (
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={() => {
-                  onOpenSkipModal();
-                }}
-              >
-                <Text style={styles.skipButtonText}>Skip</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={[
-                styles.unsubscribeButton,
-                !product?.isSkipBenefits && { flex: 1 }, // take full width if skip not visible
-              ]}
-              onPress={() => setShowUnsubscribeModal(true)}
-            >
-              <Text style={styles.unsubscribeButtonText}>Unsubscribe</Text>
-              <View style={styles.unsubscribeIconContainer}>
-                <Ionicons name="alert" size={16} color="#FF4D4D" />
-              </View>
-            </TouchableOpacity>
-          </View>
-        )
-      ) : (
-        <View style={styles.footer}>
-          <View style={styles.footerTopRow}>
-            <Text style={styles.cashbackText}>
-              Get Rs. {product?.cashback} Cashback
-            </Text>
-            <View style={styles.priceContainerFooter}>
-              {/* <Text style={styles.footerOriginalPrice}>
+          <View style={styles.footer}>
+            <View style={styles.footerTopRow}>
+              <Text style={styles.cashbackText}>
+                Get Rs. {product?.cashback} Cashback
+              </Text>
+              <View style={styles.priceContainerFooter}>
+                {/* <Text style={styles.footerOriginalPrice}>
                 Rs. {product?.strikeoutPrice}
               </Text> */}
-              <Text style={styles.footerDiscountedPrice}>
-                Rs. {product?.price}/Month
-              </Text>
+                <Text style={styles.footerDiscountedPrice}>
+                  Rs. {product?.price}/Month
+                </Text>
+              </View>
             </View>
+            <BlueButton
+              title="Subscribe & Pay"
+              onPress={() => {
+                if (isLoggedIn) {
+                  setShowConfirmationModal(true);
+                } else {
+                  navigation.navigate("Login");
+                }
+              }}
+              style={styles.subscribeButton}
+            />
           </View>
-          <BlueButton
-            title="Subscribe & Pay"
-            onPress={() => {
-              if (isLoggedIn) {
-                setShowConfirmationModal(true);
-              } else {
-                navigation.navigate("Login");
-              }
-            }}
-            style={styles.subscribeButton}
-          />
-        </View>
-      )}
+        )}
 
       {/* Skip Day Modal */}
       <Modal
@@ -1450,24 +1451,42 @@ const ProductDetailScreen = ({ navigation, route }) => {
         >
           <View style={styles.modalContainer}>
             <View style={styles.confirmationModalContent}>
-              <Text style={styles.confirmationTitle}>Confirm Subscription</Text>
-              <Text style={styles.confirmationText}>
-                Are you sure you want to subscribe to{" "}
-                <Text style={{ fontWeight: "bold" }}>{product?.name}</Text>?
-              </Text>
+              <Text style={styles.confirmationTitle}>You are subscribing to</Text>
+              <Text style={[styles.confirmationTitle, { marginTop: 0 }]}>{product?.name}</Text>
 
-              <Text style={styles.confirmationDetailsText}>
-                You'll get full refund if you cancel the pack before provider
-                delivers to you (from Manage Subscription Screen) or in case
-                provider will not be able to provide the benefits within 24
-                hours.
-              </Text>
-              <Text style={styles.confirmationDetailsText}>
-                Learn More about{" "}
-                <Text style={styles.linkText} onPress={handleRefundPolicyPress}>
-                  Refund Policy
-                </Text>
-              </Text>
+              {product?.packType !== "service" ? (
+                <>
+                  <Text style={styles.confirmationDetailsText}>
+                    You'll get full refund if you cancel the pack within 1 hour
+                    (from Manage Subscription Screen) or in case provider will
+                    not be able to deliver the benefits within 24 hours.
+                  </Text>
+                  <Text style={styles.confirmationDetailsText}>
+                    Learn More about{" "}
+                    <Text style={styles.linkText} onPress={handleRefundPolicyPress}>
+                      Refund Policy
+                    </Text>
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.confirmationDetailsText}>
+                    According to our policies we do not in any condition refund
+                    amount paid during subscription of service based subscription
+                    packs.
+                  </Text>
+                  <Text style={styles.confirmationDetailsText}>
+                    Upon subscribing your pack will start from this moment on
+                    and continue till the expiry date.
+                  </Text>
+                  <Text style={styles.confirmationDetailsText}>
+                    Learn More about{" "}
+                    <Text style={styles.linkText} onPress={handleRefundPolicyPress}>
+                      Refund Policy
+                    </Text>
+                  </Text>
+                </>
+              )}
 
               {/* Price Breakdown */}
               <View style={styles.priceBreakdown}>
@@ -1588,8 +1607,9 @@ const ProductDetailScreen = ({ navigation, route }) => {
         visible={showCashbackModal}
         amount={cashbackWon}
         onClose={handleCashbackModalClose}
+        packName={product?.name}
       />
-    </View>
+    </View >
   );
 };
 
