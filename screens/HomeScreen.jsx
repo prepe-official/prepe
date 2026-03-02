@@ -387,8 +387,8 @@ const styles = StyleSheet.create({
   },
   carouselContainer: {
     marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 10,
+    // marginTop: 5,
+    // marginBottom: 10,
   },
   carousel: {
     borderRadius: 15,

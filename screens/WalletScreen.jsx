@@ -77,10 +77,16 @@ const WalletScreen = () => {
       >
         {/* User Card */}
         <View style={styles.userCard}>
-          <Image
-            source={{ uri: user?.image || "https://placehold.co/60x60" }}
-            style={styles.avatar}
-          />
+          {user?.image ? (
+            <Image
+              source={{ uri: user.image }}
+              style={styles.avatar}
+            />
+          ) : (
+            <View style={[styles.avatar, { justifyContent: "center", alignItems: "center" }]}>
+              <Ionicons name="person" size={32} color="#fff" />
+            </View>
+          )}
           <Text style={styles.userName}>{user?.name || "User"}</Text>
         </View>
 
@@ -97,7 +103,7 @@ const WalletScreen = () => {
           style={styles.actionButton}
           onPress={() => navigation.navigate("Recharge")}
         >
-          <Ionicons name="refresh-circle-outline" size={24} color="#333" />
+          <Ionicons name="add-circle-outline" size={26} color="#333" />
           <Text style={styles.actionText}>Recharge Wallet</Text>
         </TouchableOpacity>
 
@@ -105,25 +111,26 @@ const WalletScreen = () => {
           style={styles.actionButton}
           onPress={() => navigation.navigate("TransactionHistory")}
         >
-          <Ionicons name="time-outline" size={24} color="#333" />
+          <Ionicons name="time-outline" size={26} color="#333" />
           <Text style={styles.actionText}>Transaction History</Text>
         </TouchableOpacity>
-      </ScrollView>
-      {/* Note Section */}
-      <View style={styles.noteCard}>
-        <Ionicons name="alert-circle-outline" size={20} color="#e63946" />
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={styles.noteText}>
-            Once added, you will not be able to withdraw the amount.
-          </Text>
-          <Text style={[styles.noteText, { marginTop: 8 }]}>
-            The Amount Available In The Wallet Can Only Be Used To Subscribe
-            Packs Available In This Platform (Mobile Application). During The
-            Time Of Closing The Account Permanently Please Reach Out To Our
-            Support Team At - {supportEmail} Or Call Us At {supportPhone}
-          </Text>
+
+        {/* Note Section */}
+        <View style={styles.noteCard}>
+          <Ionicons name="alert-circle-outline" size={22} color="#e63946" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.noteText}>
+              Once added, you will not be able to withdraw the amount.
+            </Text>
+            <Text style={[styles.noteText, { marginTop: 8 }]}>
+              The Amount Available In The Wallet Can Only Be Used To Subscribe
+              Packs Available In This Platform (Mobile Application). During The
+              Time Of Closing The Account Permanently Please Reach Out To Our
+              Support Team At - {supportEmail} Or Call Us At {supportPhone}
+            </Text>
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -203,8 +210,7 @@ const styles = StyleSheet.create({
   noteText: {
     color: "#e63946",
     fontSize: 14,
-    flex: 1,
-    lineHeight: 18,
+    lineHeight: 20,
   },
 });
 
