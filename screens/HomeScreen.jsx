@@ -307,7 +307,12 @@ const HomeScreen = ({ navigation }) => {
               >
                 <View style={styles.productImageContainer}>
                   <Image
-                    source={{ uri: product.images[0] }}
+                    source={{
+                      uri:
+                        product.images && product.images.length > 0
+                          ? product.images[0]
+                          : "https://via.placeholder.com/150",
+                    }}
                     style={styles.productImage}
                   />
                   {product.strikeoutPrice && product.strikeoutPrice > product.price && (

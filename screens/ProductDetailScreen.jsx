@@ -662,7 +662,12 @@ const ProductDetailScreen = ({ navigation, route }) => {
             data={images}
             renderItem={({ item }) => (
               <Image
-                source={{ uri: item }}
+                source={{
+                  uri:
+                    typeof item === "string" && item.trim() !== ""
+                      ? item
+                      : "https://via.placeholder.com/150",
+                }}
                 style={styles.productImage}
                 resizeMode="contain"
               />

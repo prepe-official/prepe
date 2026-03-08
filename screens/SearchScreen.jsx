@@ -121,7 +121,15 @@ const SearchScreen = ({ navigation, route }) => {
       }
     >
       <View style={styles.productImageContainer}>
-        <Image source={{ uri: item.images[0] }} style={styles.productImage} />
+        <Image
+          source={{
+            uri:
+              item.images && item.images.length > 0
+                ? item.images[0]
+                : "https://via.placeholder.com/150",
+          }}
+          style={styles.productImage}
+        />
         {item.strikeoutPrice && item.strikeoutPrice > item.price && (
           <View style={styles.saveTag}>
             <Text style={styles.saveTagText}>
