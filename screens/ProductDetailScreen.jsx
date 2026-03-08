@@ -72,6 +72,14 @@ const ProductDetailScreen = ({ navigation, route }) => {
     refundLink: "",
   });
 
+  const durationMap = {
+    day: "Daily",
+    week: "Weekly",
+    "2weeks": "Every 2 Weeks",
+    "3weeks": "Every 3 Weeks",
+    month: "Monthly",
+  };
+
   // Fetch configuration when component mounts
   useEffect(() => {
     const fetchConfiguration = async () => {
@@ -704,28 +712,28 @@ const ProductDetailScreen = ({ navigation, route }) => {
               )}
               <Text style={styles.productDescription}>
                 {product?.packType !== "service"
-                  ? `${product?.quantity} ${product?.unit}/${product?.duration}`
-                  : product?.duration}
+                  ? `${product?.quantity} ${product?.unit}/${durationMap[product?.duration] || product?.duration}`
+                  : durationMap[product?.duration] || product?.duration}
               </Text>
             </View>
           </View>
 
           <View style={styles.priceContainer}>
-            {product?.strikeoutPrice && product?.strikeoutPrice > product?.price && (
+            {Math.round(product?.strikeoutPrice) > Math.round(product?.price) && (
               <View style={styles.saveTag}>
                 <Text style={styles.saveTagText}>
                   Rs. {Math.round(product.strikeoutPrice - product.price)} OFF
                 </Text>
               </View>
             )}
-            <View style={styles.priceRow}>
-              {product?.strikeoutPrice && product?.strikeoutPrice > product?.price && (
+            <View style={styles.mainPriceRow}>
+              {Math.round(product?.strikeoutPrice) > Math.round(product?.price) && (
                 <Text style={styles.originalPrice}>
                   Rs. {Math.round(product.strikeoutPrice)}
                 </Text>
               )}
               <Text style={styles.discountedPrice}>
-                Rs. {Math.round(product?.price)}/Month
+                Rs. {Math.round(product?.price)} / month
               </Text>
             </View>
           </View>
@@ -1490,17 +1498,17 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
               {/* Price Breakdown */}
               <View style={styles.priceBreakdown}>
-                <View style={styles.priceRow}>
+                <View style={styles.priceBreakdownRow}>
                   <Text style={styles.priceLabel}>Pack Price:</Text>
                   <Text style={styles.priceValue}>₹{product?.price}</Text>
                 </View>
-                <View style={styles.priceRow}>
+                <View style={styles.priceBreakdownRow}>
                   <Text style={styles.priceLabel}>Platform Fees:</Text>
                   <Text style={styles.priceValue}>
                     ₹{(product?.totalAmount - product?.price).toFixed(2)}
                   </Text>
                 </View>
-                <View style={styles.priceRow}>
+                <View style={styles.priceBreakdownRow}>
                   <Text style={[styles.priceLabel, { fontWeight: "bold" }]}>
                     Total Price:
                   </Text>
@@ -1796,12 +1804,17 @@ const styles = StyleSheet.create({
   },
   saveTagText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1994E5",
   },
-  priceRow: {
+  mainPriceRow: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  priceBreakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 4,
   },
   originalPrice: {
     fontSize: 16,

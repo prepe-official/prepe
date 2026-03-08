@@ -33,6 +33,14 @@ const SubscriptionsScreen = () => {
   const { user, token } = useSelector((state) => state.user);
   const [refreshing, setRefreshing] = useState(false);
 
+  const durationMap = {
+    day: "Daily",
+    week: "Weekly",
+    "2weeks": "Every 2 Weeks",
+    "3weeks": "Every 3 Weeks",
+    month: "Monthly",
+  };
+
   const fetchPendingOrders = useCallback(async () => {
     if (!user) return;
 
@@ -57,6 +65,9 @@ const SubscriptionsScreen = () => {
           quantity: order.packId.packType !== "service"
             ? `${order.packId.quantity} ${order.packId.unit}`
             : "",
+          price: order.packId.price,
+          totalAmount: order.packId.totalAmount, // This might need to be calculated or fetched
+          strikeoutPrice: order.packId.strikeoutPrice,
           deliveryDate: new Date(order.deliveryDate).toLocaleDateString(
             "en-GB"
           ),
@@ -90,11 +101,13 @@ const SubscriptionsScreen = () => {
           packId: sub.packId._id,
           name: sub.packId.name,
           quantity: sub.packId.packType !== "service"
-            ? `${sub.packId.quantity} ${sub.packId.unit} / Day`
+            ? `${sub.packId.quantity} ${sub.packId.unit} / ${durationMap[sub.packId.duration] || sub.packId.duration}`
             : "",
           subscriptionDate: new Date(sub.createdAt).toLocaleDateString("en-GB"),
           expiryDate: new Date(sub.expiryDate).toLocaleDateString("en-GB"),
-          price: sub.packId.totalAmount,
+          price: sub.packId.price,
+          totalAmount: sub.packId.totalAmount,
+          strikeoutPrice: sub.packId.strikeoutPrice,
           isAutopay: sub.isAutopay,
           createdAt: sub.createdAt,
         }));
@@ -232,8 +245,22 @@ const SubscriptionsScreen = () => {
       >
         <View>
           <Text style={styles.subscriptionName}>{item.name}</Text>
-          {/* <Text style={styles.subscriptionQuantity}>{item.quantity}</Text>
-          <Text style={styles.subscriptionPrice}>Rs. {item.price} / Month</Text> */}
+          <Text style={styles.subscriptionQuantity}>{item.quantity}</Text>
+          {Math.round(item.strikeoutPrice) > Math.round(item.price) && (
+            <View style={styles.saveTag}>
+              <Text style={styles.saveTagText}>
+                Rs. {Math.round(item.strikeoutPrice - item.price)} OFF
+              </Text>
+            </View>
+          )}
+          <View style={styles.priceRow}>
+            {Math.round(item.strikeoutPrice) > Math.round(item.price) && (
+              <Text style={styles.originalPrice}>
+                Rs. {Math.round(item.strikeoutPrice)}
+              </Text>
+            )}
+            <Text style={styles.currentPrice}>Rs. {item.price} / month</Text>
+          </View>
         </View>
         <View style={styles.subscriptionDates}>
           <Text style={styles.subscriptionDate}>
@@ -271,6 +298,13 @@ const SubscriptionsScreen = () => {
         <View>
           <Text style={styles.pendingOrderName}>{item.name}</Text>
           <Text style={styles.pendingOrderQuantity}>{item.quantity}</Text>
+          {Math.round(item.strikeoutPrice) > Math.round(item.price) && (
+            <View style={[styles.saveTag, { marginTop: 4 }]}>
+              <Text style={styles.saveTagText}>
+                Rs. {Math.round(item.strikeoutPrice - item.price)} OFF
+              </Text>
+            </View>
+          )}
         </View>
         <View style={styles.pendingOrderDates}>
           <Text style={styles.pendingOrderDate}>
@@ -484,6 +518,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     fontWeight: "600",
+  },
+  saveTag: {
+    backgroundColor: "#E8F4FD",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  saveTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#1994E5",
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  originalPrice: {
+    fontSize: 14,
+    color: "#888",
+    textDecorationLine: "line-through",
+    marginRight: 6,
+  },
+  currentPrice: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#000",
   },
   autoPayContainer: {
     flexDirection: "row",

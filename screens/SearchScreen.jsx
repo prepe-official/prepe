@@ -21,6 +21,14 @@ const SearchScreen = ({ navigation, route }) => {
   const [searchResults, setSearchResults] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const durationMap = {
+    day: "Daily",
+    week: "Weekly",
+    "2weeks": "Every 2 Weeks",
+    "3weeks": "Every 3 Weeks",
+    month: "Monthly",
+  };
+
   const handleSearch = async () => {
     setIsSearching(true);
     setSearchResults(null);
@@ -112,9 +120,32 @@ const SearchScreen = ({ navigation, route }) => {
         navigation.navigate("ProductDetail", { navigation, packId: item._id })
       }
     >
-      <Image source={{ uri: item.images[0] }} style={styles.productImage} />
+      <View style={styles.productImageContainer}>
+        <Image source={{ uri: item.images[0] }} style={styles.productImage} />
+        {item.strikeoutPrice && item.strikeoutPrice > item.price && (
+          <View style={styles.saveTag}>
+            <Text style={styles.saveTagText}>
+              Rs. {Math.round(item.strikeoutPrice - item.price)} OFF
+            </Text>
+          </View>
+        )}
+      </View>
       <Text style={styles.productName}>{item.name}</Text>
-      <Text style={styles.productDescription}>{item.description}</Text>
+      <Text style={styles.productDescription}>
+        {item.packType !== "service"
+          ? `${item.quantity} ${item.unit}/${durationMap[item.duration] || item.duration}`
+          : durationMap[item.duration] || item.duration}
+      </Text>
+      <View style={styles.priceRowContainer}>
+        {item.strikeoutPrice && item.strikeoutPrice > item.price && (
+          <Text style={styles.strikeoutPrice}>
+            Rs. {Math.round(item.strikeoutPrice)}
+          </Text>
+        )}
+        <Text style={styles.currentPrice}>
+          Rs. {Math.round(item.price)} / month
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -287,10 +318,48 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   productDescription: {
-    fontSize: 14,
-    color: "#333",
-    marginBottom: 10,
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "600",
+    marginBottom: 4,
     marginHorizontal: 10,
+  },
+  productImageContainer: {
+    position: "relative",
+  },
+  saveTag: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "#E8F4FD",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  saveTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#1994E5",
+  },
+  priceRowContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 10,
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+  strikeoutPrice: {
+    fontSize: 12,
+    color: "#888",
+    textDecorationLine: "line-through",
+    marginRight: 6,
+  },
+  currentPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000",
   },
 });
 

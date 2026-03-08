@@ -31,6 +31,14 @@ const HomeScreen = ({ navigation }) => {
   const [carouselItems, setCarouselItems] = useState([]);
   const [activeSlide, setActiveSlide] = useState(0);
 
+  const durationMap = {
+    day: "Daily",
+    week: "Weekly",
+    "2weeks": "Every 2 Weeks",
+    "3weeks": "Every 3 Weeks",
+    month: "Monthly",
+  };
+
   const carouselRef = useRef(null);
   const autoScrollTimer = useRef(null);
 
@@ -313,9 +321,19 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.productName}>{product.name}</Text>
                 <Text style={styles.productDescription}>
                   {product.packType !== "service"
-                    ? `${product.quantity} ${product.unit}/${product.duration}`
-                    : product.duration}
+                    ? `${product.quantity} ${product.unit}/${durationMap[product.duration] || product.duration}`
+                    : durationMap[product.duration] || product.duration}
                 </Text>
+                <View style={styles.priceRowContainer}>
+                  {product.strikeoutPrice && product.strikeoutPrice > product.price && (
+                    <Text style={styles.strikeoutPrice}>
+                      Rs. {Math.round(product.strikeoutPrice)}
+                    </Text>
+                  )}
+                  <Text style={styles.currentPrice}>
+                    Rs. {Math.round(product.price)} / month
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -491,10 +509,28 @@ const styles = StyleSheet.create({
   },
   productDescription: {
     fontSize: 13,
-    color: "#333",
+    color: "#666",
     fontWeight: "600",
-    marginBottom: 10,
+    marginBottom: 4,
     marginHorizontal: 10,
+  },
+  priceRowContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 10,
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+  strikeoutPrice: {
+    fontSize: 12,
+    color: "#888",
+    textDecorationLine: "line-through",
+    marginRight: 6,
+  },
+  currentPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000",
   },
   homeScrollView: {
     flexGrow: 1,
