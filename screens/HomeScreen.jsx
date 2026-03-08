@@ -520,17 +520,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   priceRowContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "flex-start",
     marginHorizontal: 10,
     marginBottom: 10,
-    flexWrap: "wrap",
   },
   strikeoutPrice: {
     fontSize: 12,
     color: "#888",
     textDecorationLine: "line-through",
-    marginRight: 6,
+    marginBottom: 2,
   },
   currentPrice: {
     fontSize: 14,
